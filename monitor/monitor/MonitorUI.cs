@@ -190,7 +190,7 @@ public partial class MainWindow : Gtk.Window
 
     /// <summary>
     /// Display a popup message window
-    /// </summary>
+	/// </summary>tLev
     /// <param name="type">Type of popup window (question, error, information,...)</param>
     /// <param name="buttons">Buttons available on popup window</param>
     /// <param name="title">Title of window</param>
