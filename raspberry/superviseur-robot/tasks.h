@@ -74,8 +74,9 @@ private:
     RT_TASK th_server;
     RT_TASK th_sendToMon;
     RT_TASK th_receiveFromMon;
-    RT_TASK th_openComRobot;
+    RT_TASK th_openComRobot; 
     RT_TASK th_startRobot;
+    RT_TASK th_reloadWdRobot;
     RT_TASK th_move;
     RT_TASK th_battery;
     
@@ -94,6 +95,7 @@ private:
     RT_SEM sem_openComRobot;
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
+    RT_SEM sem_reloadWDRobot;
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -128,6 +130,11 @@ private:
      * @brief Thread starting the communication with the robot.
      */
     void StartRobotTask(void *arg);
+
+    /**
+     * @brief Thread resetting the robot watchdog timeout timer every 1s.
+     */
+    void ReloadWdTask(void *arg);
     
     /**
      * @brief Thread handling control of the robot.
