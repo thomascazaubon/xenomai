@@ -519,8 +519,13 @@ namespace monitor
             localStatus = commandManager.SendCommand(
                 CreateCommand(DestijlCommandList.CAMERA_OPEN),
                 out answer,
-                this.timeout);
+				10000);
 
+			if(localStatus == CommandManager.CommandManagerStatus.Timeout)
+				Console.WriteLine("timeout open camera");
+			else
+				Console.WriteLine("answer: " + answer);
+				
             return DecodeStatus(localStatus, answer);
         }
 

@@ -64,6 +64,7 @@ private:
     /**********************************************************************/
     ComMonitor monitor;
     ComRobot robot;
+    Camera camera;
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
     bool watchdog = false;
@@ -79,6 +80,8 @@ private:
     RT_TASK th_reloadWdRobot;
     RT_TASK th_move;
     RT_TASK th_battery;
+    RT_TASK th_camera; 
+    RT_TASK th_capture;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -87,6 +90,7 @@ private:
     RT_MUTEX mutex_robot;
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
+    RT_MUTEX mutex_camera;
 
     /**********************************************************************/
     /* Semaphores                                                         */
@@ -96,6 +100,7 @@ private:
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
     RT_SEM sem_reloadWDRobot;
+    RT_SEM sem_openCam;
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -145,6 +150,16 @@ private:
      * @brief Thread asking for battery level.
      */
     void GetBattery(void *arg);
+    
+    /**
+     * @brief Thread opening communication with the camera.
+     */
+    void OpenCam(void *arg);
+    
+    /**
+     * @brief Thread opening communication with the camera.
+     */
+    void CaptureImage(void *arg);
     
     /**********************************************************************/
     /* Queue services                                                     */
