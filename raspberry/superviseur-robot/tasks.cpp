@@ -457,7 +457,7 @@ void Tasks::MoveTask(void *arg) {
     int rs;
     int cpMove;
     int cpt = 0;
-    int answer;
+    Message * answer;
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
@@ -483,11 +483,11 @@ void Tasks::MoveTask(void *arg) {
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
             answer = robot.Write(new Message((MessageID) cpMove));
             rt_mutex_release(&mutex_robot);
-            if (answer == MESSAGE_ANSWER_COM_ERROR){
+            if (answer->GetID() == MESSAGE_ANSWER_COM_ERROR){
                 cpt++;
                 if (cpt == 3){
                     //ERROR COM LOST
-                    WriteInQueue(&q_messageToMon, Message(MESSAGE_MONITOR_LOST));
+                    WriteInQueue(&q_messageToMon, new Message(MESSAGE_MONITOR_LOST));
                     Stop();
                 }
             }else{
