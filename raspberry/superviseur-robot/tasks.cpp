@@ -30,6 +30,7 @@
 #define PRIORITY_TBATTERY 19
 #define PRIORITY_TRELOADWD 24
 
+
 /*
  * Some remarks:
  * 1- This program is mostly a template. It shows you how to create tasks, semaphore
@@ -56,6 +57,7 @@
 void Tasks::Init() {
     int status;
     int err;
+    th_capture_mode = TH_MODE_NO_ARENA;
 
     /**************************************************************************************/
     /* 	Mutex creation                                                                    */
@@ -109,6 +111,10 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_sem_create(&sem_search_arena, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Semaphores created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -159,7 +165,7 @@ void Tasks::Init() {
     /**************************************************************************************/
     /* Message queues creation                                                            */
     /**************************************************************************************/
-    if ((err = rt_queue_create(&q_messageToMon, "q_messageToMon", sizeof (Message*)*50, Q_UNLIMITED, Q_FIFO)) < 0) {
+    if ((err = rt_queue_create(&q_messageToMon, "q_messageToMon", sizeof (Message*)*200, Q_UNLIMITED, Q_FIFO)) < 0) {
         cerr << "Error msg queue create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -278,9 +284,9 @@ void Tasks::SendToMonTask(void* arg) {
     rt_sem_p(&sem_serverOk, TM_INFINITE);
 
     while (1) {
-        cout << "wait msg to send" << endl << flush;
+        //cout << "wait msg to send" << endl << flush;
         msg = ReadInQueue(&q_messageToMon);
-        cout << "Send msg to mon: " << msg->ToString() << endl << flush;
+        //cout << "Send msg to mon: " << msg->ToString() << endl << flush;
         rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
         monitor.Write(msg); // The message is deleted with the Write
         rt_mutex_release(&mutex_monitor);
@@ -355,7 +361,40 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             move = msgRcv->GetID();
             rt_mutex_release(&mutex_move);
         } else if (msgRcv->CompareID(MESSAGE_CAM_OPEN)){
+            th_capture_mode = TH_MODE_NO_ARENA;
             rt_sem_v(&sem_openCam);
+        } else if (msgRcv->CompareID(MESSAGE_CAM_CLOSE)){
+            startCapture = false;
+            rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+            camera.Close();
+            rt_mutex_release(&mutex_camera);
+            WriteInQueue(&q_messageToMon, new Message(MESSAGE_ANSWER_ACK));
+        } else if (msgRcv->CompareID(MESSAGE_CAM_ASK_ARENA)){
+            int status;
+            rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+            status = camera.IsOpen();
+            rt_mutex_release(&mutex_camera);
+            if(status){
+                th_capture_mode = TH_MODE_SEARCH_ARENA;
+            }
+        } else if (msgRcv->CompareID(MESSAGE_CAM_ARENA_CONFIRM)){
+            int status;
+            rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+            status = camera.IsOpen();
+            rt_mutex_release(&mutex_camera);
+            if(status){
+                th_capture_mode = TH_MODE_WITH_ARENA;
+                rt_sem_v(&sem_search_arena);
+            }
+        } else if (msgRcv->CompareID(MESSAGE_CAM_ARENA_INFIRM)){
+            int status;
+            rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+            status = camera.IsOpen();
+            rt_mutex_release(&mutex_camera);
+            if(status){
+                th_capture_mode = TH_MODE_NO_ARENA;
+                rt_sem_v(&sem_search_arena);
+            }
         }
         
         delete(msgRcv); // mus be deleted manually, no consumer
@@ -568,18 +607,19 @@ void Tasks::OpenCam(void *arg) {
         cout << ")" << endl << flush;
         
         Message * msgSend;
-        if (status) {
-            msgSend = new Message(MESSAGE_ANSWER_ACK);
-        } else {
+        if (!status) {
             msgSend = new Message(MESSAGE_ANSWER_NACK);
+            WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon/
         }
-        WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
+        else
+            startCapture = true;
     }
 }
 
 void Tasks::CaptureImage(void * arg) {
-    MessageImg* msg = new MessageImg();
+    MessageImg* msg;
     bool status;
+    Arena arena;
     //cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
@@ -589,13 +629,38 @@ void Tasks::CaptureImage(void * arg) {
         rt_mutex_acquire(&mutex_camera, TM_INFINITE);
         status = camera.IsOpen();
         rt_mutex_release(&mutex_camera);
-        if (status) {
-            rt_mutex_acquire(&mutex_camera, TM_INFINITE);
-            Img img = camera.Grab();
-            rt_mutex_release(&mutex_camera);
-            cout << endl << "Periodic camera image update : " << msg->ToString() << endl;
-            WriteInQueue(&q_messageToMon, new MessageImg(MESSAGE_CAM_IMAGE, &img));
-            cout << endl << flush;
+        if (status && startCapture) {
+            if(th_capture_mode == TH_MODE_NO_ARENA){
+                rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+                msg = new MessageImg(MESSAGE_CAM_IMAGE, camera.Grab().Copy());
+                rt_mutex_release(&mutex_camera);
+                WriteInQueue(&q_messageToMon, msg);
+            }
+            else if(th_capture_mode == TH_MODE_WITH_ARENA){
+                rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+                Img * img = camera.Grab().Copy();
+                rt_mutex_release(&mutex_camera);
+                img->DrawArena(arena);
+                msg = new MessageImg(MESSAGE_CAM_IMAGE, img);
+                WriteInQueue(&q_messageToMon, msg);
+            }
+            else if(th_capture_mode == TH_MODE_SEARCH_ARENA){
+                rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+                Img * img = camera.Grab().Copy();
+                rt_mutex_release(&mutex_camera);
+                arena = img->SearchArena();
+                if(!arena.IsEmpty()){
+                    img->DrawArena(arena);
+                    msg = new MessageImg(MESSAGE_CAM_IMAGE, img);
+                    WriteInQueue(&q_messageToMon, msg);
+                    rt_sem_p(&sem_search_arena, TM_INFINITE);
+                }
+                else{
+                    th_capture_mode = TH_MODE_NO_ARENA;
+                    WriteInQueue(&q_messageToMon, new Message(MESSAGE_ANSWER_NACK));
+                }
+            }
+            //cout << endl << flush;
         }
 
     }

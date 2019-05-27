@@ -34,6 +34,11 @@
 #include "camera.h"
 #include "img.h"
 
+
+#define TH_MODE_SEARCH_ARENA 0
+#define TH_MODE_WITH_ARENA 1
+#define TH_MODE_NO_ARENA 2
+
 using namespace std;
 
 class Tasks {
@@ -68,6 +73,8 @@ private:
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
     bool watchdog = false;
+    bool startCapture = false;
+    int th_capture_mode;
     
     /**********************************************************************/
     /* Tasks                                                              */
@@ -101,6 +108,7 @@ private:
     RT_SEM sem_startRobot;
     RT_SEM sem_reloadWDRobot;
     RT_SEM sem_openCam;
+    RT_SEM sem_search_arena;
 
     /**********************************************************************/
     /* Message queues                                                     */
