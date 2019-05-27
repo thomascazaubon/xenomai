@@ -642,6 +642,11 @@ void Tasks::CaptureImage(void * arg) {
                 Img * img = camera.Grab().Copy();
                 rt_mutex_release(&mutex_camera);
                 img->DrawArena(arena);
+                
+                std:list<Position> positions = img->SearchRobot(arena);
+                //cout << "position size = " << positions.size() <<endl;
+                if(positions.size() > 0)
+                    img->DrawRobot(positions.front());
                 msg = new MessageImg(MESSAGE_CAM_IMAGE, img);
                 WriteInQueue(&q_messageToMon, msg);
             }
@@ -652,7 +657,7 @@ void Tasks::CaptureImage(void * arg) {
                 rt_mutex_release(&mutex_camera);
                 arena = img->SearchArena();
                 
-                    cout << arena.ToString() << endl;
+                cout << arena.ToString() << endl;
                 if(!arena.IsEmpty()){
                     cout << "fillfull camera" << endl;
                     img->DrawArena(arena);
