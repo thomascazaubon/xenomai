@@ -637,6 +637,7 @@ void Tasks::CaptureImage(void * arg) {
                 WriteInQueue(&q_messageToMon, msg);
             }
             else if(th_capture_mode == TH_MODE_WITH_ARENA){
+                cout << "TH_MODE_WITH_ARENA" << endl;
                 rt_mutex_acquire(&mutex_camera, TM_INFINITE);
                 Img * img = camera.Grab().Copy();
                 rt_mutex_release(&mutex_camera);
@@ -645,17 +646,22 @@ void Tasks::CaptureImage(void * arg) {
                 WriteInQueue(&q_messageToMon, msg);
             }
             else if(th_capture_mode == TH_MODE_SEARCH_ARENA){
+                cout << "TH_MODE_SEARCH_ARENA" << endl;
                 rt_mutex_acquire(&mutex_camera, TM_INFINITE);
                 Img * img = camera.Grab().Copy();
                 rt_mutex_release(&mutex_camera);
                 arena = img->SearchArena();
+                
+                    cout << arena.ToString() << endl;
                 if(!arena.IsEmpty()){
+                    cout << "fillfull camera" << endl;
                     img->DrawArena(arena);
                     msg = new MessageImg(MESSAGE_CAM_IMAGE, img);
                     WriteInQueue(&q_messageToMon, msg);
                     rt_sem_p(&sem_search_arena, TM_INFINITE);
                 }
                 else{
+                    cout << "empty camera" << endl;
                     th_capture_mode = TH_MODE_NO_ARENA;
                     WriteInQueue(&q_messageToMon, new Message(MESSAGE_ANSWER_NACK));
                 }
