@@ -293,3 +293,4 @@ void Img::DrawArena(Arena arenaToDraw) {
 ImageMat Img::CropArena(Arena arena) {
     return this->img(arena.arena);
 }
+        

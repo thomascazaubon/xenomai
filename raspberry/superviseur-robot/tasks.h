@@ -74,6 +74,7 @@ private:
     int move = MESSAGE_ROBOT_STOP;
     bool watchdog = false;
     bool startCapture = false;
+    bool findRobot = false;
     int th_capture_mode;
     
     /**********************************************************************/
@@ -109,11 +110,12 @@ private:
     RT_SEM sem_reloadWDRobot;
     RT_SEM sem_openCam;
     RT_SEM sem_search_arena;
+//    RT_SEM sem_move_robot;
 
     /**********************************************************************/
     /* Message queues                                                     */
     /**********************************************************************/
-    int MSG_QUEUE_SIZE;
+    int MSG_QUEUE_SIZE = sizeof (Message*)*200;
     RT_QUEUE q_messageToMon;
     
     /**********************************************************************/
