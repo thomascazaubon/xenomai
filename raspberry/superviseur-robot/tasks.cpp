@@ -59,8 +59,8 @@ void Tasks::Init() {
     int status;
     int err;
     th_capture_mode = TH_MODE_NO_ARENA;
-    
-        /**************************************************************************************/
+
+    /**************************************************************************************/
     /* Message queues creation                                                            */
     /**************************************************************************************/
     if ((err = rt_queue_create(&q_messageToMon, "q_messageToMon", MSG_QUEUE_SIZE, Q_UNLIMITED, Q_FIFO)) < 0) {
@@ -69,7 +69,7 @@ void Tasks::Init() {
     }
     cout << "Queues created successfully" << endl << flush;
 
-    
+
     /**************************************************************************************/
     /* 	Mutex creation                                                                    */
     /**************************************************************************************/
@@ -131,7 +131,7 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     cout << "Semaphores created successfully" << endl << flush;
-    
+
     /**************************************************************************************/
     /* Tasks creation                                                                     */
     /**************************************************************************************/
@@ -554,7 +554,10 @@ void Tasks::StartRobotTask(void *arg) {
             cout << ")" << endl;
 
             cout << "start with wd answer: " << msgSend->ToString() << endl << flush;
-            WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
+            if (msgSend->GetID() == MESSAGE_ANSWER_ROBOT_TIMEOUT)
+                WriteInQueue(&q_messageToMon, new Message(MESSAGE_ANSWER_NACK));
+            else
+                WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
 
             if (msgSend->GetID() == MESSAGE_ANSWER_ACK) {
                 rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
@@ -574,7 +577,10 @@ void Tasks::StartRobotTask(void *arg) {
             cout << ")" << endl;
 
             cout << "start without wd answer: " << msgSend->ToString() << endl << flush;
-            WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
+            if (msgSend->GetID() == MESSAGE_ANSWER_ROBOT_TIMEOUT)
+                WriteInQueue(&q_messageToMon, new Message(MESSAGE_ANSWER_NACK));
+            else
+                WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
 
             if (msgSend->GetID() == MESSAGE_ANSWER_ACK) {
                 rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
@@ -670,12 +676,12 @@ void Tasks::GetBatteryTask(void * arg) {
             rt_mutex_release(&mutex_robot);
             robotAnswer = batteryLevel->GetID();
             //cout << endl << "Periodic battery level update : " << ((MessageBattery*) batteryLevel)->GetLevel() << endl;
-        if (!(batteryLevel->GetID() == MESSAGE_ANSWER_ROBOT_TIMEOUT
-                || batteryLevel->GetID() == MESSAGE_ANSWER_ROBOT_UNKNOWN_COMMAND
-                || batteryLevel->GetID() == MESSAGE_ANSWER_ROBOT_ERROR
-                || batteryLevel->GetID() == MESSAGE_ANSWER_COM_ERROR))
-            WriteInQueue(&q_messageToMon, batteryLevel);
-         
+            if (!(batteryLevel->GetID() == MESSAGE_ANSWER_ROBOT_TIMEOUT
+                    || batteryLevel->GetID() == MESSAGE_ANSWER_ROBOT_UNKNOWN_COMMAND
+                    || batteryLevel->GetID() == MESSAGE_ANSWER_ROBOT_ERROR
+                    || batteryLevel->GetID() == MESSAGE_ANSWER_COM_ERROR))
+                WriteInQueue(&q_messageToMon, batteryLevel);
+
             cout << endl << flush;
         }
 
@@ -805,13 +811,14 @@ void Tasks::ComRobotMonitorTask(void* arg) {
         if (robotAnswer == MESSAGE_ANSWER_ROBOT_TIMEOUT
                 || robotAnswer == MESSAGE_ANSWER_ROBOT_UNKNOWN_COMMAND
                 || robotAnswer == MESSAGE_ANSWER_ROBOT_ERROR
-                || robotAnswer == MESSAGE_ANSWER_COM_ERROR){
+                || robotAnswer == MESSAGE_ANSWER_COM_ERROR) {
             compteur++;
-            cout <<endl <<endl <<"Compteur activated! " << compteur << "<--" <<endl <<endl;
-        }
-        else
+            cout << endl << endl << "Compteur activated! " << compteur << "<--" << endl << endl;
+        } else if(robotAnswer != -1){
+            if(compteur != 0)
+                cout << robotAnswer << " Reinitializing compteur " << endl;
             compteur = 0;
-
+        }
         if (compteur >= 3) {
             WriteInQueue(&q_messageToMon, new Message(MESSAGE_ANSWER_ROBOT_TIMEOUT));
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
@@ -819,8 +826,8 @@ void Tasks::ComRobotMonitorTask(void* arg) {
             rt_mutex_release(&mutex_robot);
             cout << endl << "Connection lost. Reseting robot... " << endl;
         }
-        
-        robotAnswer = MESSAGE_ANSWER_ACK;
+
+        robotAnswer = -1;
     }
 
 }
