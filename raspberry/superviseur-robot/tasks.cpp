@@ -658,7 +658,7 @@ void Tasks::CaptureImage(void * arg) {
                 rt_mutex_acquire(&mutex_camera, TM_INFINITE);
                 Img * img = camera.Grab().Copy();
                 rt_mutex_release(&mutex_camera);
-                img->DrawArena(arena);
+                
                 
                 if(findRobot){
                     std:list<Position> positions = img->SearchRobot(arena);
@@ -674,6 +674,7 @@ void Tasks::CaptureImage(void * arg) {
                     }
                 }
                 
+                img->DrawArena(arena);
                 msg = new MessageImg(MESSAGE_CAM_IMAGE, img);
                 rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
                 monitor.Write(msg); // The message is deleted with the Write
