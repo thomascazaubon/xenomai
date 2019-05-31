@@ -59,13 +59,10 @@ public:
     void Stop();
     
     /**
-     * @brief Deletes tasks
-     */
-    //void DeleteTasks();
-    /**
      * @brief Suspends main thread
      */
     void Join();
+    
     
 private:
     /**********************************************************************/
@@ -81,6 +78,9 @@ private:
     bool findRobot = false;
     bool restart = false;
     int th_capture_mode;
+    // Pour surveiller les échecs de communications avec le robot.
+    int compteur = 0;
+    int robotAnswer = MESSAGE_ANSWER_ACK;
     
     /**********************************************************************/
     /* Tasks                                                              */
@@ -96,7 +96,7 @@ private:
     RT_TASK th_battery;
     RT_TASK th_camera; 
     RT_TASK th_capture;
-    
+    RT_TASK th_comRobotMonitor;
     /**********************************************************************/
     /* Mutex                                                              */
     /**********************************************************************/
@@ -170,17 +170,22 @@ private:
     /**
      * @brief Thread asking for battery level.
      */
-    void GetBattery(void *arg);
+    void GetBatteryTask(void *arg);
     
     /**
      * @brief Thread opening communication with the camera.
      */
-    void OpenCam(void *arg);
+    void OpenCamTask(void *arg);
     
     /**
-     * @brief Thread opening communication with the camera.
+     * @brief Thread starting capture with the camera.
      */
-    void CaptureImage(void *arg);
+    void CaptureImageTask(void *arg);
+    
+    /**
+     * @brief Thread monitoring com with robot.
+     */
+    void ComRobotMonitorTask(void *arg);
     
     /**********************************************************************/
     /* Queue services                                                     */
