@@ -412,7 +412,16 @@ void Tasks::ReceiveFromMonTask(void *arg) {
                 watchdog = true;
             rt_sem_v(&sem_startRobot);
             rt_sem_v(&sem_reloadWDRobot);
+<<<<<<< HEAD
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_RESET)) {
+=======
+        } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITH_WD)) {
+            watchdog = true;
+            rt_sem_v(&sem_startRobot);
+            rt_sem_v(&sem_reloadWDRobot);
+        }
+        else if (msgRcv->CompareID(MESSAGE_ROBOT_RESET)){
+>>>>>>> 8c1bbf2114599ab64fda94a2741e035c1e01f48b
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
             Message * response = robot.Write(robot.Reset());
             rt_mutex_release(&mutex_robot);
@@ -599,7 +608,8 @@ void Tasks::ReloadWdTask(void* arg) {
 void Tasks::MoveTask(void *arg) {
     int rs;
     int cpMove;
-
+    int cpt = 0;
+    Message * answer;
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
@@ -623,8 +633,18 @@ void Tasks::MoveTask(void *arg) {
             cout << " move: " << cpMove << endl;
 
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-            robot.Write(new Message((MessageID) cpMove));
+            answer = robot.Write(new Message((MessageID) cpMove));
             rt_mutex_release(&mutex_robot);
+            if (answer->GetID() == MESSAGE_ANSWER_COM_ERROR){
+                cpt++;
+                if (cpt == 3){
+                    //ERROR COM LOST
+                    WriteInQueue(&q_messageToMon, new Message(MESSAGE_MONITOR_LOST));
+                    Stop();
+                }
+            }else{
+                cpt = 0;
+            }
         }
 
         //cout << endl << flush;
