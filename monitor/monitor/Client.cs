@@ -35,7 +35,7 @@ namespace monitor
         /// <summary>
         /// Default server name
         /// </summary>
-        public const string defaultIP = "10.105.1.6";
+        public const string defaultIP = "10.105.1.7";
 
         /// <summary>
         /// Default server port number

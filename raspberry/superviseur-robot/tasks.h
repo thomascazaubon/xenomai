@@ -59,6 +59,10 @@ public:
     void Stop();
     
     /**
+     * @brief Deletes tasks
+     */
+    //void DeleteTasks();
+    /**
      * @brief Suspends main thread
      */
     void Join();
@@ -75,11 +79,13 @@ private:
     bool watchdog = false;
     bool startCapture = false;
     bool findRobot = false;
+    bool restart = false;
     int th_capture_mode;
     
     /**********************************************************************/
     /* Tasks                                                              */
     /**********************************************************************/
+    RT_TASK th_reinit;
     RT_TASK th_server;
     RT_TASK th_sendToMon;
     RT_TASK th_receiveFromMon;
@@ -104,13 +110,13 @@ private:
     /* Semaphores                                                         */
     /**********************************************************************/
     RT_SEM sem_barrier;
+    RT_SEM sem_reinit;
     RT_SEM sem_openComRobot;
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
     RT_SEM sem_reloadWDRobot;
     RT_SEM sem_openCam;
     RT_SEM sem_search_arena;
-//    RT_SEM sem_move_robot;
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -121,6 +127,11 @@ private:
     /**********************************************************************/
     /* Tasks' functions                                                   */
     /**********************************************************************/
+    /**
+     * @brief Thread handling server communication with the monitor.
+     */
+    void ReinitTask(void *arg);
+    
     /**
      * @brief Thread handling server communication with the monitor.
      */
