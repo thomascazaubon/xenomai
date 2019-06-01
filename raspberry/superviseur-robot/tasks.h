@@ -38,6 +38,8 @@
 #define TH_MODE_SEARCH_ARENA 0
 #define TH_MODE_WITH_ARENA 1
 #define TH_MODE_NO_ARENA 2
+#define DEBUG 0
+#define PERIODIC_DEBUG 0
 
 using namespace std;
 
@@ -63,6 +65,11 @@ public:
      */
     void Join();
     
+    /**
+     * @brief Reset the robot state
+     */
+    void ResetRobot();
+    
     
 private:
     /**********************************************************************/
@@ -76,11 +83,10 @@ private:
     bool watchdog = false;
     bool startCapture = false;
     bool findRobot = false;
-    bool restart = false;
-    int th_capture_mode;
+    int th_capture_mode = TH_MODE_NO_ARENA;
     // Pour surveiller les échecs de communications avec le robot.
     int compteur = 0;
-    int robotAnswer = MESSAGE_ANSWER_ACK;
+    int robotAnswer = -1;
     
     /**********************************************************************/
     /* Tasks                                                              */
